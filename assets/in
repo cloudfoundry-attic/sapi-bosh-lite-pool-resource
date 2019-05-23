@@ -28,6 +28,7 @@ load_pubkey $payload
 
 uri=$(jq -r '.source.uri // ""' < $payload)
 name=$(jq -r '.version.name // ""' < $payload)
+keep_claimed=$(jq -r '.version.keep_claimed // "false"' < $payload)
 
 if [ -z "$uri" ]; then
   echo "invalid payload (missing uri):"
@@ -42,8 +43,9 @@ if [ -f "$env_pool_dir/bosh-lites/claimed/$name" ]; then
 fi
 
 echo "$name" > "$destination/name"
+echo "$keep_claimed" > "$destination/keep_claimed"
 
 jq -n "{
-  version: {name: \"$name\"},
+  version: {name: \"$name\", keep_claimed: \"$keep_claimed\"},
   metadata: []
 }" >&3

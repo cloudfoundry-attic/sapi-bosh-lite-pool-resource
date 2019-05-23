@@ -47,6 +47,7 @@ commit_message_prefix=$(jq -r '.params.commit_message_prefix // ""' < $payload)
 pushd "$source" > /dev/null
   if [ "$operation" == "unclaim" ]; then
     existing_bosh_lite_name=$(cat $(jq -r '.params.name // ""' < $payload))
+    keep_claimed=$(cat $(jq -r '.params.keep_claimed // "false"' < $payload))
     export GIT_AUTHOR_NAME='Services API CI'
     export GIT_AUTHOR_EMAIL='servicesapi@localhost'
     export GIT_COMMITTER_NAME='Services API CI'
@@ -227,7 +228,7 @@ function commit_and_push() {
 
 if [ "$existing_bosh_lite_name" ] && [ "$operation" == "claim" ]; then
   jq -n "{
-    version: {name: \"${existing_bosh_lite_name}\"},
+    version: {name: \"${existing_bosh_lite_name}\", keep_claimed: \"true\"},
     metadata: []
   }" >&3
 elif [ "$operation" == "claim" ]; then
@@ -238,14 +239,21 @@ elif [ "$operation" == "claim" ]; then
   >&2 commit_and_push
 
   jq -n "{
-    version: {name: \"${env}\"},
+    version: {name: \"${env}\", keep_claimed: \"false\"},
     metadata: []
   }" >&3
-elif [ "$operation" == "unclaim" ]; then
+elif [ "$operation" == "unclaim" ] && [ "$keep_claimed" == "false" ]; then
   >&2 unclaim_bosh_lite "$existing_bosh_lite_name"
 
   jq -n "{
-    version: {name: \"${existing_bosh_lite_name}\"},
+    version: {name: \"${existing_bosh_lite_name}\", keep_claimed: \"$keep_claimed\"},
+    metadata: []
+  }" >&3
+elif [ "$operation" == "unclaim" ] && [ "$keep_claimed" == "true" ]; then
+  msg "not unclaiming $existing_bosh_lite_name because keep_claimed is true"
+
+  jq -n "{
+    version: {name: \"${existing_bosh_lite_name}\", keep_claimed: \"$keep_claimed\"},
     metadata: []
   }" >&3
 else
