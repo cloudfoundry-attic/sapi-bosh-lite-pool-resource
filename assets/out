@@ -58,6 +58,7 @@ pushd "$source" > /dev/null
     export GIT_COMMITTER_EMAIL=$(cat $(jq -r '.params.committer_email // ""' < $payload))
 
     story=$(cat $(jq -r '.params.story // ""' < $payload))
+    existing_bosh_lite_name=$(cat $(jq -r '.params.existing_bosh_lite_name // ""' < $payload))
   fi
 popd > /dev/null
 
@@ -224,7 +225,12 @@ function commit_and_push() {
 
 >&2 cd env-pool
 
-if [ "$operation" == "claim" ]; then
+if [ "$existing_bosh_lite_name" ] && [ "$operation" == "claim" ]; then
+  jq -n "{
+    version: {name: \"${existing_bosh_lite_name}\"},
+    metadata: []
+  }" >&3
+elif [ "$operation" == "claim" ]; then
   >&2 claim_random_environment $requested_input
   env_file="$(realpath $newfile)"
 
